@@ -16,7 +16,7 @@ CREATE TABLE song (
 	artist_id INTEGER REFERENCES artist(artist_id),
 	song_name VARCHAR(255),
 	page_link VARCHAR(1000)
-	/* , FOREIGN KEY (artist_id) REFERENCES artist (artist_id) */
+--	FOREIGN KEY (artist_id) REFERENCES artist (artist_id)
 );
 
 CREATE TABLE tfidf (

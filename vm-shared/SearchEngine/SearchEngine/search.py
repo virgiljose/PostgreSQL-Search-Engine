@@ -55,11 +55,10 @@ def search(query, query_type):
 
     try:
         conn = psycopg2.connect(
-            host="localhost",
-            database="searchengine",
-            user="cs143",
-            password="cs143",
-            port="5432"
+            host='localhost',
+            database='cs143',
+            user='cs143',
+            password='cs143',
         )
     except:
         print("Could not establish connection to database")
@@ -67,13 +66,17 @@ def search(query, query_type):
 
     print("Connection successful")
 
+    # object to execute queries and fetch their results
     cursor = conn.cursor()
+
+    # execute queries
     cursor.execute("SELECT song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token LIKE %s", (rewritten_query))
 
     # TODO: paginate the results
-    rows = cursor.fetchall()
+#    rows = cursor.fetchall()
 
     # close connection
+    conn.commit()
     cursor.close()
     conn.close()
 
