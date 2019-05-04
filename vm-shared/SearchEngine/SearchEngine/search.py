@@ -50,13 +50,35 @@ def search(query, query_type):
     4. Write queries so that they are not vulnerable to SQL injections.
     5. The parameters passed to the search function may need to be changed for 1B.
     """
+
+    print("Connecting to database")
+
     try:
-        conn = psycopg2.connect("dbname='cs143' user='cs143' host='localhost' password='cs143'")
-        print "Connecting to database"
+        conn = psycopg2.connect(
+            host="localhost",
+            database="searchengine",
+            user="cs143",
+            password="cs143",
+            port="5432"
+        )
     except:
-        print "Unable to connect to database"
+        print("Could not establish connection to database")
+        return None
+
+    print("Connection successful")
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token LIKE %s", (rewritten_query))
+
+    # TODO: paginate the results
+    rows = cursor.fetchall()
+
+    # close connection
+    cursor.close()
+    conn.close()
 
     rows = []
+
     return rows
 
 if __name__ == "__main__":
