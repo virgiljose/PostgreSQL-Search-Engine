@@ -53,27 +53,30 @@ def search(query, query_type):
 
     print("Connecting to database")
 
-    try:
-        conn = psycopg2.connect(
-            host='localhost',
-            database='cs143',
-            user='cs143',
-            password='cs143',
-        )
-    except:
-        print("Could not establish connection to database")
-        return None
+    # try:
+    conn = psycopg2.connect(user="cs143", password="cs143", host="localhost", database="searchengine")
+    # except psycopg2.Error as e:
+    #     print("Error code ", e.pgcode)
+    #     print("Exception: ", e.pgerror)
+    #     return None
 
     print("Connection successful")
 
     # object to execute queries and fetch their results
     cursor = conn.cursor()
-
+    return None
     # execute queries
-    cursor.execute("SELECT song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token LIKE %s", (rewritten_query))
+
+    # if query_type == "or":
+    #     cursor.execute("CREATE MATERIALIZED VIEW song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token IN LIKE %%s%", (rewritten_query))
+    # else:
+    #     #todo
+    #     cursor.execute("CREATE MATERIALIZED VIEW song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token IN LIKE %%s%", (rewritten_query))
 
     # TODO: paginate the results
-#    rows = cursor.fetchall()
+
+    #
+    rows = cursor.fetchmany(20)
 
     # close connection
     conn.commit()
