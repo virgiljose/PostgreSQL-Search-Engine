@@ -2,9 +2,6 @@
 -- \copy song FROM '~/data/song.csv' WITH CSV DELIMITER ',' ESCAPE '"';
 -- \copy token FROM '~/data/token.csv' WITH CSV DELIMITER ',' ESCAPE '"';
 
--- log(57650 / COUNT(s.song_id))::FLOAT
--- r.count AS tf_score, score AS df_score,
-
 INSERT INTO "tfidf" ("song_id", "token", "score") (
   SELECT r.song_id, r.token, r.count*log(57650/score::FLOAT) AS tfidf_score
   FROM token r LEFT JOIN

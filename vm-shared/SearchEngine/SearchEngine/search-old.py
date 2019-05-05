@@ -50,30 +50,41 @@ def search(query, query_type):
     4. Write queries so that they are not vulnerable to SQL injections.
     5. The parameters passed to the search function may need to be changed for 1B.
     """
+
+    print("Connecting to database")
+
+    # try:
     conn = psycopg2.connect(user="cs143", password="cs143", host="localhost", database="searchengine")
+    # except psycopg2.Error as e:
+    #     print("Error code ", e.pgcode)
+    #     print("Exception: ", e.pgerror)
+    #     return None
 
     print("Connection successful")
+
+    # object to execute queries and fetch their results
     cursor = conn.cursor()
 
     cursor.execute("CREATE TABLE IF NOT EXISTS search (token VARCHAR(255), isthere INTEGER)")
     for i in rewritten_query:
         cursor.execute("INSERT INTO search (token, isthere) VALUES ((%s),1)", [i])
 
-    if query_type == "or":
-        cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, isthere FROM tfidf JOIN search ON search.token = tfidf.token ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
-    elif query_type == "and":
+   if query_type == "or":
+       cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, isthere FROM tfidf JOIN search ON search.token = tfidf.token ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
+   elif query_type == "and":
+       cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, isthere FROM tfidf JOIN search ON search.token = tfidf.token ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
+#       cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, SUM(isthere) AS sumt FROM tfidf JOIN search ON search.token = tfidf.token GROUP BY song_id, tfidf.score HAVING SUM(isthere) >= 0 ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
+##
+    cursor.execute("SELECT * FROM search;")
 
-        cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, SUM(isthere) AS sumt, SUM(tfidf.score) FROM tfidf JOIN search ON search.token = tfidf.token GROUP BY song_id HAVING SUM(isthere) = (SELECT COUNT (*) FROM search) ORDER BY SUM(tfidf.score))  newtokens ON song.song_id = newtokens.song_id;")
- #       cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, SUM(isthere) AS sumt FROM tfidf JOIN search ON search.token = tfidf.token GROUP BY song_id, tfidf.score HAVING SUM(isthere) >= 0 ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
-
-
-    cursor.execute("SELECT * FROM results;")
-
+    # TODO: paginate the results
     rows = cursor.fetchall()
+    # close connection
     cursor.execute("DROP MATERIALIZED VIEW IF EXISTS results CASCADE;")
     cursor.execute("DROP TABLE IF EXISTS search CASCADE;")
     cursor.close()
     conn.close()
+
     return rows
 
 if __name__ == "__main__":
