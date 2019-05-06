@@ -37,7 +37,9 @@ def _get_tokens(query):
 
 def search(query, query_type, offset):
 
-    rewritten_query = _get_tokens(query)
+    rewritten_query0 = _get_tokens(query)
+    rewritten_query = [x.lower() for x in rewritten_query0]
+
     query_len = 0
     conn = None
     rows = []
@@ -49,8 +51,9 @@ def search(query, query_type, offset):
         cursor = conn.cursor()
 
         cursor.execute("CREATE TABLE IF NOT EXISTS search (token VARCHAR(255), isthere INTEGER)")
+        cursor.execute("PREPARE getsearchvals (varchar(255)) AS INSERT INTO search (token, isthere) VALUES($1, 1);")
         for i in rewritten_query:
-            cursor.execute("INSERT INTO search (token, isthere) VALUES ((%s),1)", [i])
+            cursor.execute("EXECUTE getsearchvals((%s));", [i])
 
         if query_type == "or":
             #cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, isthere FROM tfidf JOIN search ON search.token = tfidf.token ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
