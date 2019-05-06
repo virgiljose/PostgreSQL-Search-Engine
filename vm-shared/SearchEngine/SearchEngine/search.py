@@ -51,34 +51,85 @@ def search(query, query_type):
     5. The parameters passed to the search function may need to be changed for 1B.
     """
 
-    print("Connecting to database")
-
+    # connect to database
     try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="searchengine",
-            user="cs143",
-            password="cs143",
-            port="5432"
-        )
-    except:
-        print("Could not establish connection to database")
+        conn = psycopg2.connect(user="cs143", password="cs143", host="localhost", database="searchengine")
+    except psycopg2.Error as e:
+        print(e.pgerror)
         return None
-
     print("Connection successful")
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT song_name FROM song JOIN tfidf ON song.song_id = tfidf.song_id WHERE token LIKE %s", (rewritten_query))
+    # initialize cursor object (to be used to execute and display results)
+    try:
+        cursor = conn.cursor()
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        return None
 
-    # TODO: paginate the results
-    rows = cursor.fetchall()
+    # create relation containing user's search tokens (used as part of a JOIN for the query)
+    try:
+        cursor.execute("CREATE TABLE IF NOT EXISTS search (token VARCHAR(255), isthere INTEGER)")
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        return None
 
-    # close connection
+    # create prepared statement to prevent/suppress SQL injection
+    try:
+        cursor.execute("PREPARE getsearchvals (varchar(255)) AS INSERT INTO search (token, isthere) VALUES($1, 1);")
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        return None
+
+    # iterate through each token in the user's query and add them to the search relation
+    for i in rewritten_query:
+        try:
+            cursor.execute("EXECUTE getsearchvals((%s));", [i])
+        except psycopg2.Error as e:
+            print(e.pgerror)
+            return None
+
+    # create materialized view (corresponding to AND and OR options) containing results of the song search query
+    if query_type == "or":
+        try:
+            cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, isthere FROM tfidf JOIN search ON search.token = tfidf.token ORDER BY tfidf.score) newtokens ON song.song_id = newtokens.song_id;")
+        except psycopg2.Error as e:
+            print(e.pgerror)
+            return None
+    elif query_type == "and":
+        try:
+            cursor.execute("CREATE MATERIALIZED VIEW IF NOT EXISTS results AS SELECT song.song_name, artist.artist_name FROM song LEFT JOIN artist ON artist.artist_id = song.artist_id RIGHT JOIN (SELECT song_id, SUM(isthere) AS sumt, SUM(tfidf.score) FROM tfidf JOIN search ON search.token = tfidf.token GROUP BY song_id HAVING SUM(isthere) = (SELECT COUNT (*) FROM search) ORDER BY SUM(tfidf.score))  newtokens ON song.song_id = newtokens.song_id;")
+        except psycopg2.Error as e:
+            print(e.pgerror)
+            return None
+
+    # select the results of the query via the materialized view (to be displayed, next)
+    try:
+        cursor.execute("SELECT * FROM results;")
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        return None
+
+    # display the results
+    try:
+        rows = cursor.fetchall()
+    except psycopg2.Error as e:
+        print(e.pgerror)
+        return None
+
+    # drop the tables/views that were created during the execution of this method, so as to not waste memory
+    try:
+        cursor.execute("DROP MATERIALIZED VIEW IF EXISTS results CASCADE;")
+    except psycopg2.Error as e:
+        print(e.pgerror)
+    try:
+        cursor.execute("DROP TABLE IF EXISTS search CASCADE;")
+    except psycopg2.Error as e:
+        print(e.pgerror)
+
+    # close cursor and connection
     cursor.close()
     conn.close()
-
-    rows = []
-
+    
     return rows
 
 if __name__ == "__main__":
