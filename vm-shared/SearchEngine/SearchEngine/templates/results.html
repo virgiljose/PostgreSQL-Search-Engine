@@ -4,6 +4,21 @@
 		<link rel="stylesheet" type="text/css" href="/static/searchengine.css" media="screen" />
 	</head>
 	<body>
+		{% if offset > 20 %}
+		<div>
+		<a class="btn" href="/search?query={{query}}&qtype={{qtype}}&offset={{offset-20}}">
+			<button class="button-primary">Previous</button>
+		</a>
+		{% endif %}
+
+		{% if offset+20 < results %}
+		<a class="btn" href="/search?query={{query}}&qtype={{qtype}}&offset={{offset+20}}">
+			<button class="button-primary">Next</button>
+		</a>
+	</div>
+
+		{% endif %}
+
 		<div id="results_top">
 			<div id="logo">
 				<img src="/static/header.png" width=100px height=30px>
@@ -21,8 +36,8 @@
 			</div>
 		</div>
 
-		{% if results > 0 %}
-		<p><strong>{{ results }} results for </strong>{{query}}</p>
+		{% if results > 0 and offset >= 0 %}
+		<p><strong>{{ offset }} to {{ results if offset + 20 > results else offset + 20 }} out of total {{ results }} results displayed for </strong>{{query}}</p>
 
 		{% for result in search_results %}
 		<p><strong><a href="http://www.lyricsfreak.com{{ result[2] }}" target="_blank">{{ result[0] }}</a></strong> <em>by</em> {{ result[1] }} </p>
@@ -31,5 +46,6 @@
 
 		<p><strong>No results for </strong>{{query}}</p>
 		{% endif %}
+
 	</body>
 </html>

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from flask import Flask, render_template, request
 
 import search
@@ -10,18 +8,15 @@ app.debug = True
 @app.route('/search', methods=["GET"])
 def dosearch():
     query = request.args['query']
-    qtype = request.args['query_type']
+    qtype = 'and' if 'query_type' not in request.args else request.args['query_type']
+    offset = 1 if 'offset' not in request.args else request.args['offset']
 
-    """
-    TODO:
-    Use request.args to extract other information
-    you may need for pagination.
-    """
-
-    search_results = search.search(query, qtype)
+    search_results, qlen = search.search(query, qtype, offset)
     return render_template('results.html',
             query=query,
-            results=len(search_results),
+            offset=int(offset),
+            qtype=qtype,
+            results=qlen,
             search_results=search_results)
 
 @app.route("/", methods=["GET"])
